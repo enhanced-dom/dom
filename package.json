@@ -1,0 +1,37 @@
+{
+  "name": "@enhanced-dom/dom",
+  "version": "0.0.1",
+  "description": "Helpers for basic dom operations",
+  "repository": "https://github.com/enhanced-dom/dom.git",
+  "main": "index.js",
+  "scripts": {
+    "postinstall": "@enhanced-dom-husky",
+    "package": "cd dist && npm pack",
+    "prebuild": "rimraf dist/*",
+    "build": "tsc -p ./tsconfig.json",
+    "postbuild": "copyfiles LICENSE.md README.md dist && @enhanced-dom-copy-packagejson",
+    "publish": "npm run build",
+    "test": "jest --config test/jest.config.js",
+    "lint": "eslint src/** --fix --config eslint.config.js"
+  },
+  "keywords": [],
+  "author": "CD9B4A105290E17E0948E021DF4105107C88693C59C0B891CCC08366C51AEA990902A6A156AC87D88A2FC41422A5E1C3C4071F251F19441C4516000EC25F87DF",
+  "license": "MIT",
+  "dependencies": {
+    "@enhanced-dom/css": "^0.0.2",
+    "lodash.castarray": "^4.4.0",
+    "lodash.uniqueid": "^4.0.1"
+  },
+  "devDependencies": {
+    "@enhanced-dom/build": "^0.0.2",
+    "@enhanced-dom/lint": "^0.0.7",
+    "@enhanced-dom/jest": "^0.0.1",
+    "@types/lodash.castarray": "^4.4.6",
+    "@types/lodash.uniqueid": "^4.0.7",
+    "typescript": "^4.2.2"
+  },
+  "engines": {
+    "node": ">=14.17.0",
+    "npm": ">=8.0.0"
+  }
+}
