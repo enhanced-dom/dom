@@ -8,13 +8,9 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "outDir": "dist",
-    "preserveConstEnums" : true,
+    "preserveConstEnums": true,
     "allowSyntheticDefaultImports": true,
-    "sourceMap": true,
-    "sourceRoot": "./",
-    "inlineSources": true
+    "sourceMap": false
   },
-  "include": [
-    "src/**/*.ts",
-  ]
+  "include": ["src/**/*.ts"]
 }

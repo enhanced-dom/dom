@@ -1,6 +1,6 @@
 {
   "name": "@enhanced-dom/dom",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Helpers for basic dom operations",
   "repository": "https://github.com/enhanced-dom/dom.git",
   "main": "index.js",

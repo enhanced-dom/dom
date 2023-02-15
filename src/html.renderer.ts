@@ -145,11 +145,11 @@ export class HtmlRenderer implements IHtmlRenderer {
   private _processRemoveOperation(node: Element | ShadowRoot | DocumentFragment, operation: IRemoveOperation) {
     const nodeToRemove = this._getDomNodeByPath(node, operation.path)
     const isRemoveAllChildren = operation.path.endsWith('children')
-    if (node !== nodeToRemove && !isRemoveAllChildren) {
-      const parentNode = nodeToRemove.parentNode
+    if (!isRemoveAllChildren) {
+      const parentNode = nodeToRemove === node ? nodeToRemove : nodeToRemove.parentNode
       parentNode.removeChild(nodeToRemove)
     } else {
-      Array.from(node.childNodes).forEach((cn) => node.removeChild(cn))
+      Array.from(nodeToRemove.childNodes).forEach((cn) => nodeToRemove.removeChild(cn))
     }
   }
 
@@ -198,6 +198,7 @@ export class HtmlRenderer implements IHtmlRenderer {
       )
     } catch (ex) {
       domNode.dispatchEvent(new TemplateDiffErrorEvent({ emitter: { type: HtmlRenderer.eventEmitterType, id: this._name } }))
+      console.log(ex)
       return
     }
     try {
@@ -225,6 +226,7 @@ export class HtmlRenderer implements IHtmlRenderer {
       })
     } catch (ex) {
       domNode.dispatchEvent(new TemplateRenderErrorEvent({ emitter: { type: HtmlRenderer.eventEmitterType, id: this._name } }))
+      console.log(ex)
     }
   }
 }
