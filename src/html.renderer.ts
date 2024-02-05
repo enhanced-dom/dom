@@ -1,3 +1,4 @@
+/* global ChildNode */
 import castArray from 'lodash.castarray'
 
 import type { IAbstractNode, IHtmlRenderer } from './renderer.types'

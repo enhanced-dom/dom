@@ -1,5 +1,6 @@
 import uniqueId from 'lodash.uniqueid'
 import castArray from 'lodash.castarray'
+
 import { IStylesTracker } from './renderer.types'
 
 const getClassNameRegex = (className: string) => new RegExp(`\\.${className}(\\[|\\s>|:|\\s\\.|\\s{|\\s#)`)
