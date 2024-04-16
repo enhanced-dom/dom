@@ -133,65 +133,67 @@ export class AbstractDomDiff {
               data: null,
             }),
           )
-          const prevNodeChildren = prevNode.children?.filter?.((c) => c != null) ?? []
-          const currNodeChildren = currNode.children?.filter?.((c) => c != null) ?? []
-          if (!prevNodeChildren.length) {
-            currNodeChildren
-              ?.filter((n) => n != null)
-              .forEach((n) =>
+          if (!currNode.ignoreChildren) {
+            const prevNodeChildren = prevNode.children?.filter?.((c) => c != null) ?? []
+            const currNodeChildren = currNode.children?.filter?.((c) => c != null) ?? []
+            if (!prevNodeChildren.length) {
+              currNodeChildren
+                ?.filter((n) => n != null)
+                .forEach((n) =>
+                  operations.push({
+                    path: `${parentPath}${AbstractDomDiff.separators.path}children`,
+                    type: AbstractDomOperationType.ADD,
+                    data: n,
+                  }),
+                )
+            } else if (!currNodeChildren.length) {
+              operations.push({
+                path: `${parentPath}${AbstractDomDiff.separators.path}children`,
+                type: AbstractDomOperationType.REMOVE,
+              })
+            } else {
+              const matchedChildren: Record<number, number> = {}
+              const childrenToInsert: number[] = []
+              currNodeChildren.forEach((c, idx) => {
+                const matchedPrevChild = prevNodeChildren.find((pc, pidx) => AbstractDomDiff.areMatching(c, pc) && !matchedChildren[pidx])
+                if (matchedPrevChild) {
+                  matchedChildren[prevNodeChildren.indexOf(matchedPrevChild)] = idx
+                } else {
+                  childrenToInsert.push(idx)
+                }
+              })
+              const indexesToRemove = prevNodeChildren.map((_, idx) => idx).filter((idx) => matchedChildren[idx] === undefined)
+              Object.entries(matchedChildren).forEach((value) => {
+                const prevChildNode = prevNodeChildren[value[0]]
+                const currentChildNode = currNodeChildren[value[1]]
+                actualDiff(prevChildNode, currentChildNode, `${parentPath}${AbstractDomDiff.separators.path}children#${value[0]}`)
+              })
+              indexesToRemove.reverse().forEach((idx) =>
                 operations.push({
-                  path: `${parentPath}${AbstractDomDiff.separators.path}children`,
-                  type: AbstractDomOperationType.ADD,
-                  data: n,
+                  type: AbstractDomOperationType.REMOVE,
+                  path: `${parentPath}${AbstractDomDiff.separators.path}children${AbstractDomDiff.separators.childIdx}${idx}`,
                 }),
               )
-          } else if (!currNodeChildren.length) {
-            operations.push({
-              path: `${parentPath}${AbstractDomDiff.separators.path}children`,
-              type: AbstractDomOperationType.REMOVE,
-            })
-          } else {
-            const matchedChildren: Record<number, number> = {}
-            const childrenToInsert: number[] = []
-            currNodeChildren.forEach((c, idx) => {
-              const matchedPrevChild = prevNodeChildren.find((pc, pidx) => AbstractDomDiff.areMatching(c, pc) && !matchedChildren[pidx])
-              if (matchedPrevChild) {
-                matchedChildren[prevNodeChildren.indexOf(matchedPrevChild)] = idx
-              } else {
-                childrenToInsert.push(idx)
-              }
-            })
-            const indexesToRemove = prevNodeChildren.map((_, idx) => idx).filter((idx) => matchedChildren[idx] === undefined)
-            Object.entries(matchedChildren).forEach((value) => {
-              const prevChildNode = prevNodeChildren[value[0]]
-              const currentChildNode = currNodeChildren[value[1]]
-              actualDiff(prevChildNode, currentChildNode, `${parentPath}${AbstractDomDiff.separators.path}children#${value[0]}`)
-            })
-            indexesToRemove.reverse().forEach((idx) =>
-              operations.push({
-                type: AbstractDomOperationType.REMOVE,
-                path: `${parentPath}${AbstractDomDiff.separators.path}children${AbstractDomDiff.separators.childIdx}${idx}`,
-              }),
-            )
-            childrenToInsert.reverse().forEach((idx) =>
-              operations.push({
-                type: AbstractDomOperationType.INSERT,
-                path: `${parentPath}${AbstractDomDiff.separators.path}children${AbstractDomDiff.separators.childIdx}0`,
-                data: currNodeChildren[idx],
-              }),
-            )
-            Object.entries(matchedChildren).forEach((value) => {
-              const itemsRemovedBeforeCurrent = indexesToRemove.filter((i) => i < parseInt(value[0])).length
-              const itemsAddedBeforeCurrent = childrenToInsert.length
-              const correctedActualPosition = parseInt(value[0]) - itemsRemovedBeforeCurrent + itemsAddedBeforeCurrent
-              if (correctedActualPosition !== value[1]) {
+              childrenToInsert.reverse().forEach((idx) =>
                 operations.push({
-                  type: AbstractDomOperationType.MOVE,
-                  path: `${parentPath}${AbstractDomDiff.separators.path}children#${correctedActualPosition}`,
-                  data: value[1],
-                })
-              }
-            })
+                  type: AbstractDomOperationType.INSERT,
+                  path: `${parentPath}${AbstractDomDiff.separators.path}children${AbstractDomDiff.separators.childIdx}0`,
+                  data: currNodeChildren[idx],
+                }),
+              )
+              Object.entries(matchedChildren).forEach((value) => {
+                const itemsRemovedBeforeCurrent = indexesToRemove.filter((i) => i < parseInt(value[0])).length
+                const itemsAddedBeforeCurrent = childrenToInsert.length
+                const correctedActualPosition = parseInt(value[0]) - itemsRemovedBeforeCurrent + itemsAddedBeforeCurrent
+                if (correctedActualPosition !== value[1]) {
+                  operations.push({
+                    type: AbstractDomOperationType.MOVE,
+                    path: `${parentPath}${AbstractDomDiff.separators.path}children#${correctedActualPosition}`,
+                    data: value[1],
+                  })
+                }
+              })
+            }
           }
         }
       }

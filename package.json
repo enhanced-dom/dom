@@ -1,6 +1,6 @@
 {
   "name": "@enhanced-dom/dom",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Helpers for basic dom operations",
   "repository": "https://github.com/enhanced-dom/dom.git",
   "main": "index.js",
@@ -18,14 +18,14 @@
   "author": "CD9B4A105290E17E0948E021DF4105107C88693C59C0B891CCC08366C51AEA990902A6A156AC87D88A2FC41422A5E1C3C4071F251F19441C4516000EC25F87DF",
   "license": "MIT",
   "dependencies": {
-    "@enhanced-dom/css": "^0.1.0",
+    "@enhanced-dom/css": "~0.2.0",
     "lodash.castarray": "^4.4.0",
     "lodash.uniqueid": "^4.0.1"
   },
   "devDependencies": {
-    "@enhanced-dom/build": "^0.1.0",
-    "@enhanced-dom/lint": "^0.1.2",
-    "@enhanced-dom/jest": "^0.1.0",
+    "@enhanced-dom/build": "~0.1.0",
+    "@enhanced-dom/lint": "~0.1.4",
+    "@enhanced-dom/jest": "~0.1.0",
     "@types/jest": "^29.5.12",
     "@types/lodash.castarray": "^4.4.9",
     "@types/lodash.uniqueid": "^4.0.9",

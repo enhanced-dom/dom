@@ -17,6 +17,7 @@ export interface IAbstractElement extends IAbstractNodeBase {
   attributes?: Record<string, any>
   children?: IAbstractNode[]
   content?: never
+  ignoreChildren?: boolean
 }
 
 export interface IAbstractNonElement extends IAbstractNodeBase {
