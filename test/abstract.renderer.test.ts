@@ -1,3 +1,4 @@
+/* global expect, test, describe */
 import '@testing-library/jest-dom'
 import { AbstractDomDiff, SECTION_ID, type IAbstractNode, AbstractDomOperationType } from '../src'
 
@@ -195,5 +196,72 @@ describe('abstract dom diff', () => {
     result = diff.diff(ast3, ast1)
     expect(result.length).toEqual(1)
     expect(result[0]).toEqual({ path: '/children', type: AbstractDomOperationType.REMOVE })
+  })
+
+  test('matching elements - with event handlers', () => {
+    const sameEventHandler = () => 2
+    const ast1 = {
+      tag: 'span',
+      eventListeners: { click: () => 1, lala: () => 1 },
+      children: [
+        {
+          tag: 'span',
+          attributes: {
+            width: 3,
+          },
+          eventListeners: { click: sameEventHandler },
+        },
+        {
+          tag: 'div',
+        },
+      ],
+    }
+
+    const ast2 = {
+      tag: 'span',
+      eventListeners: { lala: () => 1 },
+      children: [
+        {
+          tag: 'span',
+          attributes: {
+            width: 3,
+          },
+          eventListeners: { click: sameEventHandler, lala: () => 4 },
+        },
+        {
+          tag: 'div',
+          eventListeners: { click: () => 3 },
+        },
+      ],
+    }
+
+    const diff = new AbstractDomDiff()
+    const result = diff.diff(ast2, ast1)
+    expect(result.length).toEqual(5)
+    expect(result[0]).toEqual({
+      path: '',
+      type: AbstractDomOperationType.UNREGISTER_LISTENER,
+      data: { eventName: 'lala', listener: ast1.eventListeners['lala'] },
+    })
+    expect(result[1]).toEqual({
+      path: '',
+      type: AbstractDomOperationType.REGISTER_LISTERNER,
+      data: { eventName: 'lala', listener: ast2.eventListeners['lala'] },
+    })
+    expect(result[2]).toEqual({
+      path: '',
+      type: AbstractDomOperationType.UNREGISTER_LISTENER,
+      data: { eventName: 'click', listener: ast1.eventListeners['click'] },
+    })
+    expect(result[3]).toEqual({
+      path: '/children#0',
+      type: AbstractDomOperationType.REGISTER_LISTERNER,
+      data: { eventName: 'lala', listener: ast2.children[0].eventListeners['lala'] },
+    })
+    expect(result[4]).toEqual({
+      path: '/children#1',
+      type: AbstractDomOperationType.REGISTER_LISTERNER,
+      data: { eventName: 'click', listener: ast2.children[1].eventListeners['click'] },
+    })
   })
 })

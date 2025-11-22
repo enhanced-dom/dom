@@ -1,5 +1,6 @@
+/* global jest, expect, test, describe */
 import '@testing-library/jest-dom'
-import { HtmlRenderer, SECTION_ID, type IAbstractNode } from '../src'
+import { HtmlRenderer, SECTION_ID, WithManagedEvents, type IAbstractNode } from '../src'
 
 describe('html renderer', () => {
   test('non-element', () => {
@@ -163,5 +164,78 @@ describe('html renderer', () => {
     expect(div.innerHTML).toEqual(
       '<span>AA<span width="20"></span><div></div><div height="5"></div><slot name="aaa" color="blue"></slot></span>',
     )
+  })
+
+  test('matching elements - with listeners', () => {
+    const focusHandler = jest.fn()
+    const clickHandler = jest.fn()
+    const otherClickHandler = jest.fn()
+    const ast1: IAbstractNode = {
+      tag: 'span',
+      eventListeners: {
+        click: clickHandler,
+      },
+      children: [
+        {
+          tag: 'div',
+          eventListeners: {
+            focus: focusHandler,
+          },
+        },
+      ],
+    }
+
+    const ast2: IAbstractNode = {
+      tag: 'span',
+      children: [
+        {
+          tag: 'div',
+          eventListeners: {
+            focus: focusHandler,
+            click: otherClickHandler,
+          },
+        },
+      ],
+    }
+
+    const renderer = new HtmlRenderer()
+    const div = document.createElement('div')
+    renderer.render(div, ast1)
+    let span = div.querySelector('span') as WithManagedEvents<HTMLSpanElement>
+    // check the event listeners on the span element have been registered both on the node and as listeners
+    expect(span._managedEventListeners).not.toBe(undefined)
+    expect(span._managedEventListeners['click']).toEqual(clickHandler)
+    span.click()
+    expect(clickHandler).toHaveBeenCalled()
+
+    // check the event listeners on the inner div element have been registered both on the node and as listeners
+    let innerDiv = span.querySelector('div') as WithManagedEvents<HTMLDivElement>
+    expect(innerDiv._managedEventListeners).not.toBe(undefined)
+    expect(innerDiv._managedEventListeners['focus']).toEqual(focusHandler)
+    innerDiv.dispatchEvent(new Event('focus')) // innerDiv.focus() does not have the same effect
+    expect(focusHandler).toHaveBeenCalled()
+
+    // reset handlers
+    clickHandler.mockReset()
+    focusHandler.mockReset()
+    expect(clickHandler).not.toHaveBeenCalled()
+    expect(focusHandler).not.toHaveBeenCalled()
+
+    renderer.render(div, ast2)
+
+    // check the lack of a click handler on the span + the old listener should no longer react
+    span = div.querySelector('span') as WithManagedEvents<HTMLSpanElement>
+    expect(span._managedEventListeners?.['click']).toEqual(undefined)
+    span.click()
+    expect(clickHandler).not.toHaveBeenCalled()
+
+    // check the focus listener still exists on the inner div, and it still reacts
+    innerDiv = span.querySelector('div') as WithManagedEvents<HTMLDivElement>
+    expect(innerDiv._managedEventListeners['focus']).toEqual(focusHandler)
+    expect(innerDiv._managedEventListeners['click']).toEqual(otherClickHandler) // check other event handlers have been added
+    innerDiv.dispatchEvent(new Event('focus'))
+    expect(focusHandler).toHaveBeenCalled()
+    innerDiv.click()
+    expect(otherClickHandler).toHaveBeenCalled()
   })
 })

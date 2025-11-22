@@ -18,6 +18,7 @@ export interface IAbstractElement extends IAbstractNodeBase {
   children?: IAbstractNode[]
   content?: never
   ignoreChildren?: boolean
+  eventListeners?: Record<string, (e: Event) => void>
 }
 
 export interface IAbstractNonElement extends IAbstractNodeBase {

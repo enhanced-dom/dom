@@ -1,6 +1,6 @@
 {
   "name": "@enhanced-dom/dom",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Helpers for basic dom operations",
   "repository": "https://github.com/enhanced-dom/dom.git",
   "main": "index.js",
@@ -11,7 +11,7 @@
     "build": "tsc -p ./tsconfig.json",
     "postbuild": "copyfiles LICENSE.md README.md dist && @enhanced-dom-copy-packagejson",
     "publish": "npm run build",
-    "test": "jest --config test/jest.config.js",
+    "test": "jest --config test/jest.config.js --runInBand",
     "lint": "eslint src/** --fix --config eslint.config.js"
   },
   "keywords": [],

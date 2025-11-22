@@ -14,6 +14,8 @@ export enum AbstractDomOperationType {
   REPLACE = 'replace',
   INSERT = 'insert',
   MOVE = 'move',
+  REGISTER_LISTERNER = 'register_listener',
+  UNREGISTER_LISTENER = 'unregister_listener',
 }
 
 interface IOperationBase {
@@ -49,6 +51,22 @@ export interface IInsertOperation extends IOperationBase {
   data: IAbstractNode
 }
 
+export interface IRegisterListenerOperation extends IOperationBase {
+  type: AbstractDomOperationType.REGISTER_LISTERNER
+  data: {
+    eventName: string
+    listener: (e: Event) => void
+  }
+}
+
+export interface IUnregisterListenerOperation extends IOperationBase {
+  type: AbstractDomOperationType.UNREGISTER_LISTENER
+  data: {
+    eventName: string
+    listener: (e: Event) => void
+  }
+}
+
 export type IAbstractDomOperation =
   | IAddOperation
   | IRemoveOperation
@@ -56,6 +74,8 @@ export type IAbstractDomOperation =
   | IMoveOperation
   | IModifyOperation
   | IInsertOperation
+  | IRegisterListenerOperation
+  | IUnregisterListenerOperation
 
 export class AbstractDomDiff {
   static areMatching(node1: IAbstractNode, node2: IAbstractNode) {
@@ -99,6 +119,7 @@ export class AbstractDomDiff {
         if (!AbstractDomDiff.areMatching(prevNode, currNode)) {
           operations.push({ path: parentPath, type: AbstractDomOperationType.REPLACE, data: currNode })
         } else if (isAbstractElement(prevNode) && isAbstractElement(currNode)) {
+          // #region attribiutes
           const prevNodeAttributeKeys = Object.keys(prevNode.attributes ?? {})
           const lowerCasePrevNodeAttributeKeys = prevNodeAttributeKeys.map((k) => k.toLowerCase())
           const currNodeAttributeKeys = Object.keys(currNode.attributes ?? {})
@@ -133,7 +154,50 @@ export class AbstractDomDiff {
               data: null,
             }),
           )
+          // #endregion
+          // #region event listeners
+          const prevNodeListenerKeys = Object.keys(prevNode.eventListeners ?? {})
+          const currNodeListenerKeys = Object.keys(currNode.eventListeners ?? {})
+          const listenersToAdd = currNodeListenerKeys.reduce<string[]>((acc, eventName) => {
+            if (prevNode.eventListeners?.[eventName] !== currNode.eventListeners?.[eventName]) {
+              acc.push(eventName)
+            }
+            return acc
+          }, [])
+          const listenersToRemove = prevNodeListenerKeys.filter((eventName) => !currNodeListenerKeys.includes(eventName))
+          listenersToAdd.forEach((eventName) => {
+            if (prevNodeListenerKeys.includes(eventName)) {
+              operations.push({
+                path: parentPath,
+                type: AbstractDomOperationType.UNREGISTER_LISTENER,
+                data: {
+                  eventName,
+                  listener: prevNode.eventListeners[eventName],
+                },
+              })
+            }
+            operations.push({
+              path: parentPath,
+              type: AbstractDomOperationType.REGISTER_LISTERNER,
+              data: {
+                eventName,
+                listener: currNode.eventListeners[eventName],
+              },
+            })
+          })
+          listenersToRemove.forEach((eventName) => {
+            operations.push({
+              path: parentPath,
+              type: AbstractDomOperationType.UNREGISTER_LISTENER,
+              data: {
+                eventName,
+                listener: prevNode.eventListeners[eventName],
+              },
+            })
+          })
+          // #endregion
           if (!currNode.ignoreChildren) {
+            // #region children
             const prevNodeChildren = prevNode.children?.filter?.((c) => c != null) ?? []
             const currNodeChildren = currNode.children?.filter?.((c) => c != null) ?? []
             if (!prevNodeChildren.length) {
@@ -194,6 +258,7 @@ export class AbstractDomDiff {
                 }
               })
             }
+            // #endregion
           }
         }
       }

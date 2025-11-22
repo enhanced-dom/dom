@@ -11,11 +11,14 @@ import {
   IInsertOperation,
   IModifyOperation,
   IMoveOperation,
+  IRegisterListenerOperation,
   IRemoveOperation,
   IReplaceOperation,
   isAbstractElement,
+  IUnregisterListenerOperation,
 } from './abstract.renderer'
 import { parseNode } from './html.parser'
+import { WithManagedEvents } from './html.utils'
 
 export class HtmlRenderer implements IHtmlRenderer {
   private _name?: string
@@ -41,7 +44,7 @@ export class HtmlRenderer implements IHtmlRenderer {
     return null
   }
 
-  private _createHtmlNode = (ae?: IAbstractNode) => {
+  private _createHtmlNode = (document: Document, ae?: IAbstractNode) => {
     if (ae == null) {
       return null
     }
@@ -52,20 +55,27 @@ export class HtmlRenderer implements IHtmlRenderer {
       return document.createTextNode(ae.content?.toString())
     }
 
-    const { tag, attributes = {}, children = [] } = ae
+    const { tag, attributes = {}, children = [], eventListeners } = ae
     let node: Element | DocumentFragment = null
     if (tag === 'fragment') {
       node = document.createDocumentFragment()
     } else if (tag === 'svg') {
-      return this._createSvgNode(ae)
+      return this._createSvgNode(document, ae)
     } else {
-      const element = document.createElement(tag)
+      const element = document.createElement(tag) as WithManagedEvents<HTMLElement>
       Object.keys(attributes).forEach((attrName) => {
         const serializedAttributeValue = this._serializeAttributeValue(attributes[attrName])
         if (serializedAttributeValue != null) {
           element.setAttribute(attrName, serializedAttributeValue)
         }
       })
+      if (eventListeners) {
+        element._managedEventListeners = {}
+        Object.keys(eventListeners).forEach((eventName) => {
+          element.addEventListener(eventName, eventListeners[eventName])
+          element._managedEventListeners[eventName] = eventListeners[eventName]
+        })
+      }
 
       node = element
     }
@@ -78,10 +88,10 @@ export class HtmlRenderer implements IHtmlRenderer {
   }
 
   private _createHtmlNodes = (aes?: IAbstractNode[]) => {
-    return aes?.map(this._createHtmlNode) ?? []
+    return aes?.map((ae) => this._createHtmlNode(document, ae)) ?? []
   }
 
-  private _createSvgNode = (ae?: IAbstractNode) => {
+  private _createSvgNode = (document: Document, ae?: IAbstractNode) => {
     if (ae == null) {
       return null
     }
@@ -91,23 +101,33 @@ export class HtmlRenderer implements IHtmlRenderer {
       }
       return document.createTextNode(ae.content?.toString())
     }
-    const { tag, attributes = {}, children = [] } = ae
-    const element = document.createElementNS('http://www.w3.org/2000/svg', tag)
+    const { tag, attributes = {}, children = [], eventListeners } = ae
+    const element = document.createElementNS('http://www.w3.org/2000/svg', tag) as WithManagedEvents<SVGElement>
     Object.keys(attributes).forEach((attrName) => {
       const serializedAttributeValue = this._serializeAttributeValue(attributes[attrName])
       if (serializedAttributeValue != null) {
         element.setAttribute(attrName, serializedAttributeValue)
       }
     })
-    const childNodes = this._createSvgNodes(children.filter((c) => c !== null))
+    if (eventListeners) {
+      element._managedEventListeners = {}
+      Object.keys(eventListeners).forEach((eventName) => {
+        element.addEventListener(eventName, eventListeners[eventName])
+        element._managedEventListeners[eventName] = eventListeners[eventName]
+      })
+    }
+    const childNodes = this._createSvgNodes(
+      document,
+      children.filter((c) => c !== null),
+    )
 
     childNodes.forEach((n) => element.appendChild(n))
 
     return element
   }
 
-  private _createSvgNodes = (aes?: IAbstractNode[]) => {
-    return aes?.map(this._createSvgNode) ?? []
+  private _createSvgNodes = (document: Document, aes?: IAbstractNode[]) => {
+    return aes?.map((ae) => this._createSvgNode(document, ae)) ?? []
   }
 
   private _getDomNodeByPath(node: Element | ShadowRoot | DocumentFragment, path: string) {
@@ -130,7 +150,7 @@ export class HtmlRenderer implements IHtmlRenderer {
   }
 
   private _processAddOperation(node: Element | ShadowRoot | DocumentFragment, operation: IAddOperation) {
-    const childToAdd = this._createHtmlNode(operation.data)
+    const childToAdd = this._createHtmlNode(node.ownerDocument, operation.data)
     const parentNode = this._getDomNodeByPath(node, operation.path)
     parentNode.appendChild(childToAdd)
   }
@@ -156,7 +176,7 @@ export class HtmlRenderer implements IHtmlRenderer {
 
   private _processReplaceOperation(node: Element | ShadowRoot | DocumentFragment, operation: IReplaceOperation) {
     const nodeToReplace = this._getDomNodeByPath(node, operation.path) as ChildNode
-    const newNode = this._createHtmlNode(operation.data)
+    const newNode = this._createHtmlNode(node.ownerDocument, operation.data)
     const parentNode = nodeToReplace.parentNode
     const allParentChildren = Array.from(parentNode.childNodes) as Node[]
     allParentChildren.splice(allParentChildren.indexOf(nodeToReplace), 0, newNode)
@@ -176,7 +196,7 @@ export class HtmlRenderer implements IHtmlRenderer {
 
   private _processInsertOperation(node: Element | ShadowRoot | DocumentFragment, operation: IInsertOperation) {
     const existentChild = this._getDomNodeByPath(node, operation.path)
-    const newNode = this._createHtmlNode(operation.data)
+    const newNode = this._createHtmlNode(node.ownerDocument, operation.data)
     if (existentChild) {
       existentChild.parentNode.insertBefore(newNode, existentChild)
     } else {
@@ -186,6 +206,21 @@ export class HtmlRenderer implements IHtmlRenderer {
       )
       parentNode.appendChild(newNode)
     }
+  }
+
+  private _processUnregisterListenerOperation(node: Element | ShadowRoot | DocumentFragment, operation: IUnregisterListenerOperation) {
+    const element = this._getDomNodeByPath(node, operation.path) as WithManagedEvents<Element>
+    if (element._managedEventListeners) {
+      delete element._managedEventListeners[operation.data.eventName]
+    }
+    element.removeEventListener(operation.data.eventName, operation.data.listener)
+  }
+
+  private _processRegisterListenerOperation(node: Element | ShadowRoot | DocumentFragment, operation: IRegisterListenerOperation) {
+    const element = this._getDomNodeByPath(node, operation.path) as WithManagedEvents<Element>
+    element._managedEventListeners = element._managedEventListeners ?? {}
+    element._managedEventListeners[operation.data.eventName] = operation.data.listener
+    element.addEventListener(operation.data.eventName, operation.data.listener)
   }
 
   render(domNode: Element | ShadowRoot | DocumentFragment, abstractNodes: IAbstractNode | IAbstractNode[]) {
@@ -222,6 +257,12 @@ export class HtmlRenderer implements IHtmlRenderer {
             break
           case AbstractDomOperationType.INSERT:
             this._processInsertOperation(domNode, operation)
+            break
+          case AbstractDomOperationType.REGISTER_LISTERNER:
+            this._processRegisterListenerOperation(domNode, operation)
+            break
+          case AbstractDomOperationType.UNREGISTER_LISTENER:
+            this._processUnregisterListenerOperation(domNode, operation)
             break
         }
       })

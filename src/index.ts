@@ -22,3 +22,4 @@ export type {
 export { RenderingEvent } from './renderer.events'
 export { AbstractDomOperationType, AbstractDomDiff, isAbstractElement } from './abstract.renderer'
 export { StylesTracker } from './styles.tracker'
+export * from './html.utils'

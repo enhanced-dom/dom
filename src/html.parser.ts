@@ -1,9 +1,5 @@
+import { hasManagedListeners, isDocumentNode, isElementNode, isTextNode } from './html.utils'
 import { IAbstractElement, IAbstractNode } from './renderer.types'
-
-const isTextNode = (node: Node): node is Text => node.nodeType === Node.TEXT_NODE
-const isDocumentNode = (node: Node): node is Document | ShadowRoot =>
-  node.nodeType === Node.DOCUMENT_NODE || node.nodeType === Node.DOCUMENT_FRAGMENT_NODE
-const isElementNode = (node: Node): node is Element => node.nodeType === Node.ELEMENT_NODE
 
 export const parseNode = (node: Node): IAbstractNode => {
   if (isTextNode(node)) {
@@ -19,12 +15,17 @@ export const parseNode = (node: Node): IAbstractNode => {
   const astNode: IAbstractElement = {
     tag: isDocumentNode(node) ? 'fragment' : node.tagName.toLowerCase(),
     children: [],
+    eventListeners: {},
   }
 
   if (isElementNode(node)) {
     astNode.attributes = {}
     for (const attribute of node.attributes) {
       astNode.attributes[attribute.name] = attribute.value
+    }
+
+    if (hasManagedListeners(node)) {
+      astNode.eventListeners = { ...node._managedEventListeners }
     }
 
     if (astNode.tag !== 'style') {
