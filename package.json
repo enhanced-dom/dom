@@ -1,6 +1,6 @@
 {
   "name": "@enhanced-dom/dom",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Helpers for basic dom operations",
   "repository": "https://github.com/enhanced-dom/dom.git",
   "main": "index.js",
@@ -23,16 +23,16 @@
     "lodash.uniqueid": "^4.0.1"
   },
   "devDependencies": {
-    "@enhanced-dom/build": "~0.1.0",
-    "@enhanced-dom/lint": "~0.1.4",
-    "@enhanced-dom/jest": "~0.1.0",
-    "@types/jest": "^29.5.12",
+    "@enhanced-dom/build": "~0.2.0",
+    "@enhanced-dom/lint": "~0.2.1",
+    "@enhanced-dom/jest": "~0.2.0",
+    "@types/jest": "^30.0.0",
     "@types/lodash.castarray": "^4.4.9",
     "@types/lodash.uniqueid": "^4.0.9",
-    "typescript": "^5.3.3"
+    "typescript": "^5.9.3"
   },
   "engines": {
-    "node": ">=18",
+    "node": ">=20",
     "npm": ">=10"
   }
 }
