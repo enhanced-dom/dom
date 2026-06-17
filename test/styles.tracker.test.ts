@@ -1,3 +1,4 @@
+/* global jest, expect, test, describe, beforeEach */
 import '@testing-library/jest-dom'
 import { StylesTracker } from '../src'
 
