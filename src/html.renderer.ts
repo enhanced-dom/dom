@@ -1,5 +1,5 @@
 /* global ChildNode */
-import castArray from 'lodash.castarray'
+import { castArray } from 'lodash-es'
 
 import type { IAbstractNode, IHtmlRenderer } from './renderer.types'
 import { TemplateDiffErrorEvent, TemplateRenderErrorEvent } from './renderer.events'
@@ -19,6 +19,10 @@ import {
 } from './abstract.renderer'
 import { parseNode } from './html.parser'
 import { WithManagedEvents } from './html.utils'
+
+const isNotNullish = <T>(value: T | undefined | null): value is T => {
+  return value != null
+}
 
 export class HtmlRenderer implements IHtmlRenderer {
   private _name?: string
@@ -44,7 +48,7 @@ export class HtmlRenderer implements IHtmlRenderer {
     return null
   }
 
-  private _createHtmlNode = (document: Document, ae?: IAbstractNode) => {
+  private _createHtmlNode = (document: Document, ae?: IAbstractNode | null) => {
     if (ae == null) {
       return null
     }
@@ -56,7 +60,7 @@ export class HtmlRenderer implements IHtmlRenderer {
     }
 
     const { tag, attributes = {}, children = [], eventListeners } = ae
-    let node: Element | DocumentFragment = null
+    let node: Element | DocumentFragment | null = null
     if (tag === 'fragment') {
       node = document.createDocumentFragment()
     } else if (tag === 'svg') {
@@ -80,18 +84,18 @@ export class HtmlRenderer implements IHtmlRenderer {
       node = element
     }
 
-    const childNodes = this._createHtmlNodes(children.filter((c) => c !== null))
+    const childNodes = this._createHtmlNodes(children).filter(isNotNullish)
 
     childNodes.forEach((n) => node.appendChild(n))
 
     return node
   }
 
-  private _createHtmlNodes = (aes?: IAbstractNode[]) => {
+  private _createHtmlNodes = (aes?: (IAbstractNode | null)[]) => {
     return aes?.map((ae) => this._createHtmlNode(document, ae)) ?? []
   }
 
-  private _createSvgNode = (document: Document, ae?: IAbstractNode) => {
+  private _createSvgNode = (document: Document, ae?: IAbstractNode | null) => {
     if (ae == null) {
       return null
     }
@@ -116,17 +120,14 @@ export class HtmlRenderer implements IHtmlRenderer {
         element._managedEventListeners[eventName] = eventListeners[eventName]
       })
     }
-    const childNodes = this._createSvgNodes(
-      document,
-      children.filter((c) => c !== null),
-    )
+    const childNodes = this._createSvgNodes(document, children).filter(isNotNullish)
 
     childNodes.forEach((n) => element.appendChild(n))
 
     return element
   }
 
-  private _createSvgNodes = (document: Document, aes?: IAbstractNode[]) => {
+  private _createSvgNodes = (document: Document, aes?: (IAbstractNode | null)[]) => {
     return aes?.map((ae) => this._createSvgNode(document, ae)) ?? []
   }
 
@@ -151,16 +152,20 @@ export class HtmlRenderer implements IHtmlRenderer {
 
   private _processAddOperation(node: Element | ShadowRoot | DocumentFragment, operation: IAddOperation) {
     const childToAdd = this._createHtmlNode(node.ownerDocument, operation.data)
-    const parentNode = this._getDomNodeByPath(node, operation.path)
-    parentNode.appendChild(childToAdd)
+    if (childToAdd) {
+      const parentNode = this._getDomNodeByPath(node, operation.path)
+      parentNode.appendChild(childToAdd)
+    }
   }
 
   private _processMoveOperation(node: Element | ShadowRoot | DocumentFragment, operation: IMoveOperation) {
     const childToMove = this._getDomNodeByPath(node, operation.path) as ChildNode
     const parentNode = childToMove.parentNode
-    const allParentChildren = Array.from(parentNode.childNodes).filter((n) => n !== childToMove) as Node[]
-    allParentChildren.splice(operation.data, 0, childToMove)
-    allParentChildren.forEach((c) => parentNode.appendChild(c))
+    if (parentNode) {
+      const allParentChildren = Array.from(parentNode.childNodes).filter((n) => n !== childToMove) as Node[]
+      allParentChildren.splice(operation.data, 0, childToMove)
+      allParentChildren.forEach((c) => parentNode.appendChild(c))
+    }
   }
 
   private _processRemoveOperation(node: Element | ShadowRoot | DocumentFragment, operation: IRemoveOperation) {
@@ -168,7 +173,7 @@ export class HtmlRenderer implements IHtmlRenderer {
     const isRemoveAllChildren = operation.path.endsWith('children')
     if (!isRemoveAllChildren) {
       const parentNode = nodeToRemove === node ? nodeToRemove : nodeToRemove.parentNode
-      parentNode.removeChild(nodeToRemove)
+      parentNode?.removeChild(nodeToRemove)
     } else {
       Array.from(nodeToRemove.childNodes).forEach((cn) => nodeToRemove.removeChild(cn))
     }
@@ -178,9 +183,11 @@ export class HtmlRenderer implements IHtmlRenderer {
     const nodeToReplace = this._getDomNodeByPath(node, operation.path) as ChildNode
     const newNode = this._createHtmlNode(node.ownerDocument, operation.data)
     const parentNode = nodeToReplace.parentNode
-    const allParentChildren = Array.from(parentNode.childNodes) as Node[]
-    allParentChildren.splice(allParentChildren.indexOf(nodeToReplace), 0, newNode)
-    allParentChildren.forEach((c) => parentNode.appendChild(c))
+    if (newNode && parentNode) {
+      const allParentChildren = parentNode.childNodes ? (Array.from(parentNode.childNodes) as Node[]) : []
+      allParentChildren.splice(allParentChildren.indexOf(nodeToReplace), 0, newNode)
+      allParentChildren.forEach((c) => parentNode.appendChild(c))
+    }
   }
 
   private _processModifyOperation(node: Element | ShadowRoot | DocumentFragment, operation: IModifyOperation) {
@@ -197,7 +204,10 @@ export class HtmlRenderer implements IHtmlRenderer {
   private _processInsertOperation(node: Element | ShadowRoot | DocumentFragment, operation: IInsertOperation) {
     const existentChild = this._getDomNodeByPath(node, operation.path)
     const newNode = this._createHtmlNode(node.ownerDocument, operation.data)
-    if (existentChild) {
+    if (!newNode) {
+      return
+    }
+    if (existentChild?.parentNode) {
       existentChild.parentNode.insertBefore(newNode, existentChild)
     } else {
       const parentNode = this._getDomNodeByPath(
@@ -223,15 +233,12 @@ export class HtmlRenderer implements IHtmlRenderer {
     element.addEventListener(operation.data.eventName, operation.data.listener)
   }
 
-  render(domNode: Element | ShadowRoot | DocumentFragment, abstractNodes: IAbstractNode | IAbstractNode[]) {
+  render(domNode: Element | ShadowRoot | DocumentFragment, abstractNodes: IAbstractNode | IAbstractNode[] | null) {
     let operations: IAbstractDomOperation[] = []
     const existingAst = parseNode(domNode)
     try {
-      operations = this._abstractDomDiff.diff(
-        { ...existingAst, children: castArray(abstractNodes) },
-        existingAst,
-        this._serializeAttributeValue,
-      )
+      const newAst = abstractNodes ? { ...existingAst, children: castArray(abstractNodes) } : existingAst
+      operations = this._abstractDomDiff.diff(newAst, existingAst, this._serializeAttributeValue)
     } catch (ex) {
       domNode.dispatchEvent(new TemplateDiffErrorEvent({ emitter: { type: HtmlRenderer.eventEmitterType, id: this._name } }))
       console.log(ex)

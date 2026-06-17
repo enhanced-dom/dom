@@ -25,7 +25,7 @@ export class EventListenerTracker {
       if (!s?.oldNode) {
         return
       }
-      s.unhook(s.oldNode)
+      s.unhook?.(s.oldNode)
     })
 
     this._subscriptions = this._subscriptions.filter((s) => !subscriptionsToRemove.includes(s))
@@ -35,7 +35,9 @@ export class EventListenerTracker {
     this._subscriptions.forEach((s) => {
       const node = s.nodeLocator()
       if (node !== s.oldNode && node != null) {
-        s.unhook?.(s.oldNode)
+        if (s.oldNode) {
+          s.unhook?.(s.oldNode)
+        }
         s.unhook = s.hook(node)
         s.oldNode = node
       }

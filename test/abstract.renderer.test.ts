@@ -1,6 +1,6 @@
 /* global expect, test, describe */
 import '@testing-library/jest-dom'
-import { AbstractDomDiff, SECTION_ID, type IAbstractNode, AbstractDomOperationType } from '../src'
+import { AbstractDomDiff, SECTION_ID, type IAbstractNode, AbstractDomOperationType, IAbstractElement } from '../src'
 
 describe('abstract dom diff', () => {
   test('non-element vs element', () => {
@@ -163,8 +163,8 @@ describe('abstract dom diff', () => {
     expect(result[1]).toEqual({ path: '/children#1.width', type: AbstractDomOperationType.MODIFY, data: 20 })
     expect(result[2]).toEqual({ path: '/children#2.color', type: AbstractDomOperationType.MODIFY, data: 'blue' })
     expect(result[3]).toEqual({ path: '/children#3', type: AbstractDomOperationType.REMOVE })
-    expect(result[4]).toEqual({ path: '/children#0', type: AbstractDomOperationType.INSERT, data: ast2.children[3] })
-    expect(result[5]).toEqual({ path: '/children#0', type: AbstractDomOperationType.INSERT, data: ast2.children[0] })
+    expect(result[4]).toEqual({ path: '/children#0', type: AbstractDomOperationType.INSERT, data: ast2.children?.[3] })
+    expect(result[5]).toEqual({ path: '/children#0', type: AbstractDomOperationType.INSERT, data: ast2.children?.[0] })
     expect(result[6]).toEqual({ path: '/children#3', type: AbstractDomOperationType.MOVE, data: 1 })
   })
 
@@ -202,14 +202,14 @@ describe('abstract dom diff', () => {
     const sameEventHandler = () => 2
     const ast1 = {
       tag: 'span',
-      eventListeners: { click: () => 1, lala: () => 1 },
+      eventListeners: { click: () => 1, lala: () => 1 } as NonNullable<IAbstractElement['eventListeners']>,
       children: [
         {
           tag: 'span',
           attributes: {
             width: 3,
           },
-          eventListeners: { click: sameEventHandler },
+          eventListeners: { click: sameEventHandler } as NonNullable<IAbstractElement['eventListeners']>,
         },
         {
           tag: 'div',
@@ -219,18 +219,18 @@ describe('abstract dom diff', () => {
 
     const ast2 = {
       tag: 'span',
-      eventListeners: { lala: () => 1 },
+      eventListeners: { lala: () => 1 } as NonNullable<IAbstractElement['eventListeners']>,
       children: [
         {
           tag: 'span',
           attributes: {
             width: 3,
           },
-          eventListeners: { click: sameEventHandler, lala: () => 4 },
+          eventListeners: { click: sameEventHandler, lala: () => 4 } as NonNullable<IAbstractElement['eventListeners']>,
         },
         {
           tag: 'div',
-          eventListeners: { click: () => 3 },
+          eventListeners: { click: () => 3 } as NonNullable<IAbstractElement['eventListeners']>,
         },
       ],
     }

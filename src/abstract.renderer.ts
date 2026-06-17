@@ -87,7 +87,7 @@ export class AbstractDomDiff {
           key = key ?? node.attributes?.name
         }
         if (tag === 'style') {
-          key = key ?? node.attributes[STYLESHEET_ATTRIBUTE_NAME]
+          key = key ?? node.attributes?.[STYLESHEET_ATTRIBUTE_NAME]
         }
         return `tag:${tag}-identifier:${key}`
       } else {
@@ -104,15 +104,17 @@ export class AbstractDomDiff {
   }
 
   diff(
-    newElementVersion: IAbstractNode,
-    oldElementVersion?: IAbstractNode,
-    attributeSerializer: (value?: any) => string = (value) => String(value),
+    newElementVersion: IAbstractNode | null,
+    oldElementVersion?: IAbstractNode | null,
+    attributeSerializer: (value?: any) => string | null | undefined = (value) => (value != null ? String(value) : value),
   ) {
     const operations: IAbstractDomOperation[] = []
 
-    const actualDiff = (prevNode: IAbstractNode, currNode: IAbstractNode, parentPath = '') => {
+    const actualDiff = (prevNode: IAbstractNode | undefined | null, currNode: IAbstractNode | null, parentPath = '') => {
       if (prevNode == null) {
-        operations.push({ path: parentPath, type: AbstractDomOperationType.ADD, data: currNode })
+        if (currNode !== null) {
+          operations.push({ path: parentPath, type: AbstractDomOperationType.ADD, data: currNode })
+        }
       } else if (currNode == null) {
         operations.push({ path: parentPath, type: AbstractDomOperationType.REMOVE })
       } else {
@@ -130,22 +132,27 @@ export class AbstractDomDiff {
           const keysToAdd = currNodeAttributeKeys.filter((k) => !lowerCasePrevNodeAttributeKeys.includes(k.toLowerCase()))
           const keysToModify = commonPrevKeys.filter((k) => {
             const currentKey = commonCurrentKeys.find((ck) => ck.toLowerCase() === k.toLowerCase())
-            return attributeSerializer(currNode.attributes[currentKey]) !== attributeSerializer(prevNode.attributes[k])
+            if (currentKey == null) {
+              return false
+            }
+            return attributeSerializer(currNode.attributes?.[currentKey]) !== attributeSerializer(prevNode.attributes?.[k])
           })
           keysToAdd.forEach((k) =>
             operations.push({
               path: `${parentPath}${AbstractDomDiff.separators.attribute}${k}`,
               type: AbstractDomOperationType.MODIFY,
-              data: currNode.attributes[k],
+              data: currNode.attributes?.[k],
             }),
           )
           keysToModify.forEach((k) => {
             const currentKey = commonCurrentKeys.find((ck) => ck.toLowerCase() === k.toLowerCase())
-            operations.push({
-              path: `${parentPath}${AbstractDomDiff.separators.attribute}${k}`,
-              type: AbstractDomOperationType.MODIFY,
-              data: currNode.attributes[currentKey],
-            })
+            if (currentKey != null) {
+              operations.push({
+                path: `${parentPath}${AbstractDomDiff.separators.attribute}${k}`,
+                type: AbstractDomOperationType.MODIFY,
+                data: currNode.attributes?.[currentKey],
+              })
+            }
           })
           keysToRemove.forEach((k) =>
             operations.push({
@@ -156,7 +163,6 @@ export class AbstractDomDiff {
           )
           // #endregion
           // #region event listeners
-          const prevNodeListenerKeys = Object.keys(prevNode.eventListeners ?? {})
           const currNodeListenerKeys = Object.keys(currNode.eventListeners ?? {})
           const listenersToAdd = currNodeListenerKeys.reduce<string[]>((acc, eventName) => {
             if (prevNode.eventListeners?.[eventName] !== currNode.eventListeners?.[eventName]) {
@@ -164,7 +170,7 @@ export class AbstractDomDiff {
             }
             return acc
           }, [])
-          const listenersToRemove = prevNodeListenerKeys.filter((eventName) => !currNodeListenerKeys.includes(eventName))
+          const prevNodeListenerKeys = Object.keys(prevNode.eventListeners ?? {})
           listenersToAdd.forEach((eventName) => {
             if (prevNodeListenerKeys.includes(eventName)) {
               operations.push({
@@ -172,7 +178,7 @@ export class AbstractDomDiff {
                 type: AbstractDomOperationType.UNREGISTER_LISTENER,
                 data: {
                   eventName,
-                  listener: prevNode.eventListeners[eventName],
+                  listener: prevNode.eventListeners![eventName],
                 },
               })
             }
@@ -181,21 +187,25 @@ export class AbstractDomDiff {
               type: AbstractDomOperationType.REGISTER_LISTERNER,
               data: {
                 eventName,
-                listener: currNode.eventListeners[eventName],
+                listener: currNode.eventListeners![eventName],
               },
             })
           })
-          listenersToRemove.forEach((eventName) => {
-            operations.push({
-              path: parentPath,
-              type: AbstractDomOperationType.UNREGISTER_LISTENER,
-              data: {
-                eventName,
-                listener: prevNode.eventListeners[eventName],
-              },
+          if (prevNode.eventListeners) {
+            const listenersToRemove = prevNodeListenerKeys.filter((eventName) => !currNodeListenerKeys.includes(eventName))
+            listenersToRemove.forEach((eventName) => {
+              operations.push({
+                path: parentPath,
+                type: AbstractDomOperationType.UNREGISTER_LISTENER,
+                data: {
+                  eventName,
+                  listener: prevNode.eventListeners![eventName],
+                },
+              })
             })
-          })
+          }
           // #endregion
+
           if (!currNode.ignoreChildren) {
             // #region children
             const prevNodeChildren = prevNode.children?.filter?.((c) => c != null) ?? []
@@ -228,7 +238,7 @@ export class AbstractDomDiff {
               })
               const indexesToRemove = prevNodeChildren.map((_, idx) => idx).filter((idx) => matchedChildren[idx] === undefined)
               Object.entries(matchedChildren).forEach((value) => {
-                const prevChildNode = prevNodeChildren[value[0]]
+                const prevChildNode = prevNodeChildren[parseInt(value[0])]
                 const currentChildNode = currNodeChildren[value[1]]
                 actualDiff(prevChildNode, currentChildNode, `${parentPath}${AbstractDomDiff.separators.path}children#${value[0]}`)
               })

@@ -1,5 +1,4 @@
-import uniqueId from 'lodash.uniqueid'
-import castArray from 'lodash.castarray'
+import { uniqueId, castArray } from 'lodash-es'
 
 import { IStylesTracker } from './renderer.types'
 
@@ -36,7 +35,7 @@ export class StylesTracker implements IStylesTracker {
     mutations.forEach((mutation) => {
       if (mutation.type === 'childList') {
         const trackedClassNames = Object.keys(this._classNamesCache)
-        let listenersToRefresh = []
+        let listenersToRefresh: string[] = []
         if (trackedClassNames.length) {
           const styleNodesAdded = Array.from(mutation.addedNodes).filter((n) => n instanceof HTMLStyleElement) as HTMLStyleElement[]
           const trackedClassNamesToRefreshAdd = styleNodesAdded.flatMap((styleNode) => {
@@ -78,7 +77,7 @@ export class StylesTracker implements IStylesTracker {
   }
 
   public getStyles = (classNames: string | string[], listenerId?: string) => {
-    const classNamesArray = castArray(classNames).flatMap((className) => className.split(' ').filter((cn) => !!cn))
+    const classNamesArray = castArray(classNames).flatMap((className: string) => className.split(' ').filter((cn: string) => !!cn))
     if (listenerId) {
       let addedClassNameInterests = classNamesArray
       if (this._listenersInterests[listenerId]) {

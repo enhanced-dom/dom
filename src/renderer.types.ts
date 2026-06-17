@@ -1,10 +1,10 @@
-export interface IRenderingEngine {
-  render: (node: Element | ShadowRoot | DocumentFragment, args?: Record<string, any>) => void
+export interface IRenderingEngine<T extends Record<string, any> = Record<string, any>> {
+  render: (node: Element | ShadowRoot | DocumentFragment, args?: T) => void
   cleanup: () => void
 }
 
 export interface IHtmlRenderer {
-  render: (domNode: Node, abstractNodes: IAbstractNode | IAbstractNode[]) => void
+  render: (domNode: Element | ShadowRoot | DocumentFragment, abstractNodes: IAbstractNode | IAbstractNode[] | null) => void
 }
 
 export interface IAbstractNodeBase {
@@ -15,7 +15,7 @@ export interface IAbstractNodeBase {
 export interface IAbstractElement extends IAbstractNodeBase {
   tag: string
   attributes?: Record<string, any>
-  children?: IAbstractNode[]
+  children?: (IAbstractNode | null)[]
   content?: never
   ignoreChildren?: boolean
   eventListeners?: Record<string, (e: Event) => void>
