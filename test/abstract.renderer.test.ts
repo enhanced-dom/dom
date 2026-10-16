@@ -256,12 +256,12 @@ describe('abstract dom diff', () => {
     expect(result[3]).toEqual({
       path: '/children#0',
       type: AbstractDomOperationType.REGISTER_LISTERNER,
-      data: { eventName: 'lala', listener: ast2.children[0].eventListeners['lala'] },
+      data: { eventName: 'lala', listener: ast2.children![0]!.eventListeners!['lala'] },
     })
     expect(result[4]).toEqual({
       path: '/children#1',
       type: AbstractDomOperationType.REGISTER_LISTERNER,
-      data: { eventName: 'click', listener: ast2.children[1].eventListeners['click'] },
+      data: { eventName: 'click', listener: ast2.children![1]!.eventListeners!['click'] },
     })
   })
 })

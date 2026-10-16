@@ -51,7 +51,7 @@ export class StylesTracker implements IStylesTracker {
             delete this._classNamesCache[className]
           })
         }
-        listenersToRefresh.forEach((listenerId) => this._listeners[listenerId]())
+        listenersToRefresh.forEach((listenerId) => this._listeners[listenerId]?.())
       }
     })
   })
@@ -80,13 +80,13 @@ export class StylesTracker implements IStylesTracker {
     const classNamesArray = castArray(classNames).flatMap((className: string) => className.split(' ').filter((cn: string) => !!cn))
     if (listenerId) {
       let addedClassNameInterests = classNamesArray
-      if (this._listenersInterests[listenerId]) {
-        addedClassNameInterests = classNamesArray.filter((className) => !this._listenersInterests[listenerId].includes(className))
-        const removedClassNameInterests = this._listenersInterests[listenerId].filter((className) => !classNamesArray.includes(className))
+      const existingInterests = this._listenersInterests[listenerId]
+      if (existingInterests) {
+        addedClassNameInterests = classNamesArray.filter((className) => !existingInterests.includes(className))
+        const removedClassNameInterests = existingInterests.filter((className) => !classNamesArray.includes(className))
         removedClassNameInterests.forEach((className) => {
-          this._classNameListeners[className] = this._classNameListeners[className]?.filter(
-            (interestedListenerId) => interestedListenerId !== listenerId,
-          )
+          this._classNameListeners[className] =
+            this._classNameListeners[className]?.filter((interestedListenerId) => interestedListenerId !== listenerId) ?? []
         })
       }
       addedClassNameInterests.forEach((className) => {

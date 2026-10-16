@@ -59,7 +59,7 @@ describe('styles tracker', () => {
 
   test('tracks removed style nodes', (done) => {
     const stylesToRemove = '.myclass {margin: 7px;}'
-    document.head.children[1].innerHTML = stylesToRemove
+    document.head.children[1]!.innerHTML = stylesToRemove
     const tracker = new StylesTracker()
     const listener1 = jest.fn(() => {})
     const listener1Id = tracker.registerListener(listener1)
@@ -71,7 +71,7 @@ describe('styles tracker', () => {
     tracker.getStyles('myotherclass', listener2Id)
     expect(listener2).not.toHaveBeenCalled()
     setTimeout(() => {
-      document.head.removeChild(document.head.children[1])
+      document.head.removeChild(document.head.children[1]!)
       setTimeout(() => {
         expect(listener1).toHaveBeenCalled()
         expect(listener2).not.toHaveBeenCalled()

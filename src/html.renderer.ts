@@ -48,6 +48,26 @@ export class HtmlRenderer implements IHtmlRenderer {
     return null
   }
 
+  private _applyAttributesAndListeners<T extends Element>(
+    element: WithManagedEvents<T>,
+    attributes: Record<string, any>,
+    eventListeners: Record<string, (e: Event) => void> | undefined,
+  ) {
+    Object.keys(attributes).forEach((attrName) => {
+      const serializedAttributeValue = this._serializeAttributeValue(attributes[attrName])
+      if (serializedAttributeValue != null) {
+        element.setAttribute(attrName, serializedAttributeValue)
+      }
+    })
+    if (eventListeners) {
+      element._managedEventListeners = {}
+      Object.keys(eventListeners).forEach((eventName) => {
+        element.addEventListener(eventName, eventListeners[eventName]!)
+        element._managedEventListeners[eventName] = eventListeners[eventName]!
+      })
+    }
+  }
+
   private _createHtmlNode = (document: Document, ae?: IAbstractNode | null) => {
     if (ae == null) {
       return null
@@ -67,19 +87,7 @@ export class HtmlRenderer implements IHtmlRenderer {
       return this._createSvgNode(document, ae)
     } else {
       const element = document.createElement(tag) as WithManagedEvents<HTMLElement>
-      Object.keys(attributes).forEach((attrName) => {
-        const serializedAttributeValue = this._serializeAttributeValue(attributes[attrName])
-        if (serializedAttributeValue != null) {
-          element.setAttribute(attrName, serializedAttributeValue)
-        }
-      })
-      if (eventListeners) {
-        element._managedEventListeners = {}
-        Object.keys(eventListeners).forEach((eventName) => {
-          element.addEventListener(eventName, eventListeners[eventName])
-          element._managedEventListeners[eventName] = eventListeners[eventName]
-        })
-      }
+      this._applyAttributesAndListeners(element, attributes, eventListeners)
 
       node = element
     }
@@ -107,19 +115,7 @@ export class HtmlRenderer implements IHtmlRenderer {
     }
     const { tag, attributes = {}, children = [], eventListeners } = ae
     const element = document.createElementNS('http://www.w3.org/2000/svg', tag) as WithManagedEvents<SVGElement>
-    Object.keys(attributes).forEach((attrName) => {
-      const serializedAttributeValue = this._serializeAttributeValue(attributes[attrName])
-      if (serializedAttributeValue != null) {
-        element.setAttribute(attrName, serializedAttributeValue)
-      }
-    })
-    if (eventListeners) {
-      element._managedEventListeners = {}
-      Object.keys(eventListeners).forEach((eventName) => {
-        element.addEventListener(eventName, eventListeners[eventName])
-        element._managedEventListeners[eventName] = eventListeners[eventName]
-      })
-    }
+    this._applyAttributesAndListeners(element, attributes, eventListeners)
     const childNodes = this._createSvgNodes(document, children).filter(isNotNullish)
 
     childNodes.forEach((n) => element.appendChild(n))
@@ -142,8 +138,8 @@ export class HtmlRenderer implements IHtmlRenderer {
         const subpathParts = pathPart.split(AbstractDomDiff.separators.childIdx)
         if (subpathParts.length > 1) {
           // we should definitely access a child
-          const childIndex = parseInt(subpathParts[1].split('.')[0], 10)
-          finalNode = finalNode?.childNodes?.[childIndex]
+          const childIndex = parseInt(subpathParts[1]!.split('.')[0]!, 10)
+          finalNode = finalNode.childNodes[childIndex]!
         }
       }
     })
@@ -192,7 +188,7 @@ export class HtmlRenderer implements IHtmlRenderer {
 
   private _processModifyOperation(node: Element | ShadowRoot | DocumentFragment, operation: IModifyOperation) {
     const nodeToModify = this._getDomNodeByPath(node, operation.path) as Element
-    const attrName = operation.path.split(AbstractDomDiff.separators.attribute)[1]
+    const attrName = operation.path.split(AbstractDomDiff.separators.attribute)[1]!
     const serializedAttributeValue = this._serializeAttributeValue(operation.data)
     if (serializedAttributeValue != null) {
       nodeToModify.setAttribute(attrName, serializedAttributeValue)

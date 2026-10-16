@@ -1,36 +1,40 @@
 {
   "name": "@enhanced-dom/dom",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Helpers for basic dom operations",
   "repository": "https://github.com/enhanced-dom/dom.git",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "postinstall": "@enhanced-dom-husky",
+    "configure-claude": "@enhanced-dom-claude --configs react code agent rtk devcontainer caveman-lite",
+    "configure-lint": "@enhanced-dom-fallow --gitignore && @enhanced-dom-npmrc --gitignore && @enhanced-dom-nvmrc --gitignore && @enhanced-dom-husky --gitignore",
+    "configure-build": "@enhanced-dom-bootstrap-tsconfig",
+    "prepare": "npm run configure-lint && npm run configure-claude && npm run configure-build",
     "package": "cd dist && npm pack",
     "prebuild": "rimraf dist/*",
     "build": "tsc -p ./tsconfig.json",
-    "postbuild": "copyfiles LICENSE.md README.md dist && @enhanced-dom-copy-packagejson",
+    "typecheck": "tsc -p ./tsconfig.json --noEmit",
+    "postbuild": "tsc-esm-fix --target=dist && copyfiles LICENSE.md README.md dist && @enhanced-dom-copy-packagejson",
     "publish": "npm run build",
-    "test": "jest --config test/jest.config.cjs --runInBand",
-    "lint": "eslint src/** --fix --config eslint.config.cjs"
+    "test": "jest --config test/jest.config.mjs --runInBand",
+    "lint": "eslint src/** --fix --config eslint.config.mjs"
   },
   "keywords": [],
   "author": "CD9B4A105290E17E0948E021DF4105107C88693C59C0B891CCC08366C51AEA990902A6A156AC87D88A2FC41422A5E1C3C4071F251F19441C4516000EC25F87DF",
   "license": "MIT",
   "dependencies": {
-    "@enhanced-dom/css": "~0.3.1",
+    "@enhanced-dom/css": "^0.5.0",
     "lodash-es": "^4.18.1"
   },
   "devDependencies": {
-    "@enhanced-dom/build": "~0.2.0",
-    "@enhanced-dom/lint": "~0.3.0",
-    "@enhanced-dom/jest": "~0.2.1",
-    "@types/jest": "^30.0.0",
-    "@types/lodash-es": "^4.17.12",
-    "typescript": "^5.9.3"
+    "@enhanced-dom/build": "^0.3.2",
+    "@enhanced-dom/claude": "^0.3.1",
+    "@enhanced-dom/lint": "^0.4.2",
+    "@enhanced-dom/jest": "^0.3.0",
+    "@types/lodash-es": "^4.17.12"
   },
-  "engines": {
-    "node": ">=20",
-    "npm": ">=10"
+   "engines": {
+    "node": ">=22.23.2",
+    "npm": ">=12"
   }
 }

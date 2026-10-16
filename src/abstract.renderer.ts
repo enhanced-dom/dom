@@ -178,7 +178,7 @@ export class AbstractDomDiff {
                 type: AbstractDomOperationType.UNREGISTER_LISTENER,
                 data: {
                   eventName,
-                  listener: prevNode.eventListeners![eventName],
+                  listener: prevNode.eventListeners![eventName]!,
                 },
               })
             }
@@ -187,7 +187,7 @@ export class AbstractDomDiff {
               type: AbstractDomOperationType.REGISTER_LISTERNER,
               data: {
                 eventName,
-                listener: currNode.eventListeners![eventName],
+                listener: currNode.eventListeners![eventName]!,
               },
             })
           })
@@ -199,7 +199,7 @@ export class AbstractDomDiff {
                 type: AbstractDomOperationType.UNREGISTER_LISTENER,
                 data: {
                   eventName,
-                  listener: prevNode.eventListeners![eventName],
+                  listener: prevNode.eventListeners![eventName]!,
                 },
               })
             })
@@ -240,7 +240,7 @@ export class AbstractDomDiff {
               Object.entries(matchedChildren).forEach((value) => {
                 const prevChildNode = prevNodeChildren[parseInt(value[0])]
                 const currentChildNode = currNodeChildren[value[1]]
-                actualDiff(prevChildNode, currentChildNode, `${parentPath}${AbstractDomDiff.separators.path}children#${value[0]}`)
+                actualDiff(prevChildNode, currentChildNode ?? null, `${parentPath}${AbstractDomDiff.separators.path}children#${value[0]}`)
               })
               indexesToRemove.reverse().forEach((idx) =>
                 operations.push({
@@ -252,7 +252,7 @@ export class AbstractDomDiff {
                 operations.push({
                   type: AbstractDomOperationType.INSERT,
                   path: `${parentPath}${AbstractDomDiff.separators.path}children${AbstractDomDiff.separators.childIdx}0`,
-                  data: currNodeChildren[idx],
+                  data: currNodeChildren[idx]!,
                 }),
               )
               Object.entries(matchedChildren).forEach((value) => {
