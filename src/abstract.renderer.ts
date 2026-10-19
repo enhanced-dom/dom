@@ -234,7 +234,7 @@ export class AbstractDomDiff {
                   operations.push({
                     path: `${parentPath}${AbstractDomDiff.separators.path}children`,
                     type: AbstractDomOperationType.ADD,
-                    data: n,
+                    data: withKeyAttribute(n),
                   }),
                 )
             } else if (!currNodeChildren.length) {
@@ -269,7 +269,7 @@ export class AbstractDomDiff {
                 operations.push({
                   type: AbstractDomOperationType.INSERT,
                   path: `${parentPath}${AbstractDomDiff.separators.path}children${AbstractDomDiff.separators.childIdx}0`,
-                  data: currNodeChildren[idx]!,
+                  data: withKeyAttribute(currNodeChildren[idx]!),
                 }),
               )
               Object.entries(matchedChildren).forEach((value) => {

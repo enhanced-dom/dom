@@ -65,6 +65,34 @@ describe('html renderer', () => {
     expect(div.innerHTML).toEqual(`<span ${SECTION_ID}="aaa"></span>`) // new node was created again
   })
 
+  test('_key on a newly-added child survives re-render (node is reused, not recreated)', () => {
+    const renderer = new HtmlRenderer()
+    const div = document.createElement('div')
+
+    // div has no previous children yet, so this goes through the ADD-without-previous-children path
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    renderer.render(div, [{ tag: 'span', _key: 'lala', attributes: { value: 'a' } }])
+    const first = div.querySelector('span')
+    expect(first).not.toBe(null)
+    expect(first?.getAttribute(SECTION_ID)).toEqual('lala')
+
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    renderer.render(div, [{ tag: 'span', _key: 'lala', attributes: { value: 'b' } }])
+    const second = div.querySelector('span')
+    expect(second).toBe(first)
+    expect(second?.getAttribute('value')).toEqual('b')
+
+    // adding a sibling exercises the INSERT path and must not disturb the already-matched node
+    renderer.render(div, [
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      { tag: 'span', _key: 'lala', attributes: { value: 'b' } },
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      { tag: 'span', _key: 'other', attributes: { value: 'x' } },
+    ])
+    const third = div.querySelector(`[${SECTION_ID}="lala"]`)
+    expect(third).toBe(first)
+  })
+
   test('matching elements - no children', () => {
     const ast1 = {
       tag: 'span',
