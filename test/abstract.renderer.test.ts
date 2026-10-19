@@ -1,5 +1,7 @@
 /* global expect, test, describe */
 import '@testing-library/jest-dom'
+import { STYLESHEET_ATTRIBUTE_NAME } from '@enhanced-dom/css'
+
 import { AbstractDomDiff, SECTION_ID, type IAbstractNode, AbstractDomOperationType, IAbstractElement } from '../src'
 
 describe('abstract dom diff', () => {
@@ -264,4 +266,62 @@ describe('abstract dom diff', () => {
       data: { eventName: 'click', listener: ast2.children![1]!.eventListeners!['click'] },
     })
   })
+
+  /* eslint-disable @typescript-eslint/naming-convention */
+  describe('_key attribute mapping', () => {
+    test('default tag bakes _key into SECTION_ID attribute', () => {
+      const ast: IAbstractNode = { tag: 'div', _key: 'aaa' }
+
+      const diff = new AbstractDomDiff()
+      const result = diff.diff(ast, null)
+      expect(result[0]).toEqual({
+        path: '',
+        type: AbstractDomOperationType.ADD,
+        data: { tag: 'div', _key: 'aaa', attributes: { [SECTION_ID]: 'aaa' } },
+      })
+    })
+
+    test('slot tag bakes _key into name attribute', () => {
+      const ast: IAbstractNode = { tag: 'slot', _key: 'aaa' }
+
+      const diff = new AbstractDomDiff()
+      const result = diff.diff(ast, null)
+      expect(result[0]).toEqual({
+        path: '',
+        type: AbstractDomOperationType.ADD,
+        data: { tag: 'slot', _key: 'aaa', attributes: { name: 'aaa' } },
+      })
+    })
+
+    test('style tag bakes _key into stylesheet attribute', () => {
+      const ast: IAbstractNode = { tag: 'style', _key: 'aaa' }
+
+      const diff = new AbstractDomDiff()
+      const result = diff.diff(ast, null)
+      expect(result[0]).toEqual({
+        path: '',
+        type: AbstractDomOperationType.ADD,
+        data: { tag: 'style', _key: 'aaa', attributes: { [STYLESHEET_ATTRIBUTE_NAME]: 'aaa' } },
+      })
+    })
+
+    test('matches node carrying the natural attribute to one carrying the equivalent _key, per tag', () => {
+      const diff = new AbstractDomDiff()
+
+      const divByAttribute: IAbstractNode = { tag: 'div', attributes: { [SECTION_ID]: 'aaa' } }
+      const divByKey: IAbstractNode = { tag: 'div', _key: 'aaa' }
+      expect(AbstractDomDiff.areMatching(divByAttribute, divByKey)).toBe(true)
+
+      const slotByAttribute: IAbstractNode = { tag: 'slot', attributes: { name: 'aaa' } }
+      const slotByKey: IAbstractNode = { tag: 'slot', _key: 'aaa' }
+      expect(AbstractDomDiff.areMatching(slotByAttribute, slotByKey)).toBe(true)
+
+      const styleByAttribute: IAbstractNode = { tag: 'style', attributes: { [STYLESHEET_ATTRIBUTE_NAME]: 'aaa' } }
+      const styleByKey: IAbstractNode = { tag: 'style', _key: 'aaa' }
+      expect(AbstractDomDiff.areMatching(styleByAttribute, styleByKey)).toBe(true)
+
+      expect(diff.diff(divByKey, divByAttribute).length).toEqual(0)
+    })
+  })
+  /* eslint-enable @typescript-eslint/naming-convention */
 })

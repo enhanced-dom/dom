@@ -77,18 +77,22 @@ export type IAbstractDomOperation =
   | IRegisterListenerOperation
   | IUnregisterListenerOperation
 
+const getKeyAttributeName = (tag: string) => {
+  if (tag === 'slot') {
+    return 'name'
+  }
+  if (tag === 'style') {
+    return STYLESHEET_ATTRIBUTE_NAME
+  }
+  return SECTION_ID
+}
+
 export class AbstractDomDiff {
   static areMatching(node1: IAbstractNode, node2: IAbstractNode) {
     const getNodeIdentifier = (node: IAbstractNode) => {
       if (isAbstractElement(node)) {
         const tag = node.tag
-        let key = node._key ?? node.attributes?.[SECTION_ID]
-        if (tag === 'slot') {
-          key = key ?? node.attributes?.name
-        }
-        if (tag === 'style') {
-          key = key ?? node.attributes?.[STYLESHEET_ATTRIBUTE_NAME]
-        }
+        const key = node._key ?? node.attributes?.[getKeyAttributeName(tag)]
         return `tag:${tag}-identifier:${key}`
       } else {
         return `content:${node.content}`
@@ -110,21 +114,34 @@ export class AbstractDomDiff {
   ) {
     const operations: IAbstractDomOperation[] = []
 
+    const withKeyAttribute = (node: IAbstractNode): IAbstractNode => {
+      if (!isAbstractElement(node)) {
+        return node
+      }
+      const withAttr =
+        node._key != null ? { ...node, attributes: { ...node.attributes, [getKeyAttributeName(node.tag)]: node._key } } : node
+      return withAttr.children ? { ...withAttr, children: withAttr.children.map((c) => (c == null ? c : withKeyAttribute(c))) } : withAttr
+    }
+
     const actualDiff = (prevNode: IAbstractNode | undefined | null, currNode: IAbstractNode | null, parentPath = '') => {
       if (prevNode == null) {
         if (currNode !== null) {
-          operations.push({ path: parentPath, type: AbstractDomOperationType.ADD, data: currNode })
+          operations.push({ path: parentPath, type: AbstractDomOperationType.ADD, data: withKeyAttribute(currNode) })
         }
       } else if (currNode == null) {
         operations.push({ path: parentPath, type: AbstractDomOperationType.REMOVE })
       } else {
         if (!AbstractDomDiff.areMatching(prevNode, currNode)) {
-          operations.push({ path: parentPath, type: AbstractDomOperationType.REPLACE, data: currNode })
+          operations.push({ path: parentPath, type: AbstractDomOperationType.REPLACE, data: withKeyAttribute(currNode) })
         } else if (isAbstractElement(prevNode) && isAbstractElement(currNode)) {
           // #region attribiutes
-          const prevNodeAttributeKeys = Object.keys(prevNode.attributes ?? {})
+          const prevAttributes =
+            prevNode._key != null ? { ...prevNode.attributes, [getKeyAttributeName(prevNode.tag)]: prevNode._key } : prevNode.attributes
+          const currAttributes =
+            currNode._key != null ? { ...currNode.attributes, [getKeyAttributeName(currNode.tag)]: currNode._key } : currNode.attributes
+          const prevNodeAttributeKeys = Object.keys(prevAttributes ?? {}).filter((k) => k.toLowerCase() !== 'exportparts')
           const lowerCasePrevNodeAttributeKeys = prevNodeAttributeKeys.map((k) => k.toLowerCase())
-          const currNodeAttributeKeys = Object.keys(currNode.attributes ?? {})
+          const currNodeAttributeKeys = Object.keys(currAttributes ?? {}).filter((k) => k.toLowerCase() !== 'exportparts')
           const lowerCaseCurrNodeAttributeKeys = currNodeAttributeKeys.map((k) => k.toLowerCase())
           const commonCurrentKeys = currNodeAttributeKeys.filter((k) => lowerCasePrevNodeAttributeKeys.includes(k.toLowerCase()))
           const commonPrevKeys = prevNodeAttributeKeys.filter((k) => lowerCaseCurrNodeAttributeKeys.includes(k.toLowerCase()))
@@ -135,13 +152,13 @@ export class AbstractDomDiff {
             if (currentKey == null) {
               return false
             }
-            return attributeSerializer(currNode.attributes?.[currentKey]) !== attributeSerializer(prevNode.attributes?.[k])
+            return attributeSerializer(currAttributes?.[currentKey]) !== attributeSerializer(prevAttributes?.[k])
           })
           keysToAdd.forEach((k) =>
             operations.push({
               path: `${parentPath}${AbstractDomDiff.separators.attribute}${k}`,
               type: AbstractDomOperationType.MODIFY,
-              data: currNode.attributes?.[k],
+              data: currAttributes?.[k],
             }),
           )
           keysToModify.forEach((k) => {
@@ -150,7 +167,7 @@ export class AbstractDomDiff {
               operations.push({
                 path: `${parentPath}${AbstractDomDiff.separators.attribute}${k}`,
                 type: AbstractDomOperationType.MODIFY,
-                data: currNode.attributes?.[currentKey],
+                data: currAttributes?.[currentKey],
               })
             }
           })
